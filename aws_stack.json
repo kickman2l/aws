@@ -1,0 +1,138 @@
+{
+  "Resources": {
+    "vpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "192.168.0.0/16",
+        "EnableDnsSupport": "true",
+        "EnableDnsHostnames": "true",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "selfstudy-cfn-vpc"
+          }
+        ]
+      }
+    },
+    "prsubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "192.168.1.0/24",
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "selfstudy-cfn-private-subnet"
+          }
+        ]
+      }
+    },
+    "pubsubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "192.168.100.0/24",
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "selfstudy-cfn-public-subnet"
+          }
+        ]
+      }
+    },
+    "privateRT": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "selfstudy-cfn-route-tbl-pub"
+          }
+        ]
+      }
+    },
+    "publicRT": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "selfstudy-cfn-route-tbl-pr"
+          }
+        ]
+      }
+    },
+    "ip": {
+      "Type": "AWS::EC2::EIP"
+    },
+    "igw": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "selfstudy-cfn-igw"
+          }
+        ]
+      }
+    },
+    "attachgw": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "InternetGatewayId": {
+          "Ref": "igw"
+        }
+      }
+    },
+    "natgw": {
+      "Type": "AWS::EC2::NatGateway",
+      "DependsOn": "ip",
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "ip",
+            "AllocationId"
+          ]
+        },
+        "SubnetId": {
+          "Ref": "prsubnet"
+        }
+      }
+    },
+    "privateAssoc": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "prsubnet"
+        },
+        "RouteTableId": {
+          "Ref": "privateRT"
+        }
+      }
+    },
+    "publicAssoc": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "pubsubnet"
+        },
+        "RouteTableId": {
+          "Ref": "publicRT"
+        }
+      }
+    }
+  }
+}

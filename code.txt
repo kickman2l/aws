@@ -1,0 +1,43 @@
+,
+    "ROUTETABLE": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "PHERASKAVPC"
+        }
+      }
+    },
+    "PRSUBNET1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "192.168.1.0/24",
+        "VpcId": {
+          "Ref": "PHERASKAVPC"
+        }
+      }
+    }
+
+
+
+    "netwassoc1": {
+          "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+          "Properties": {
+            "SubnetId": {
+              "Ref": "prsubnet"
+            },
+            "NetworkAclId": {
+              "Ref": "privateRT"
+            }
+          }
+        },
+        "netwassoc2": {
+          "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+          "Properties": {
+            "SubnetId": {
+              "Ref": "pubsubnet"
+            },
+            "NetworkAclId": {
+              "Ref": "publicRT"
+            }
+          }
+        },
