@@ -108,7 +108,7 @@
           ]
         },
         "SubnetId": {
-          "Ref": "prsubnet"
+          "Ref": "pubsubnet"
         }
       }
     },
@@ -132,6 +132,24 @@
         "RouteTableId": {
           "Ref": "publicRT"
         }
+      }
+    },
+    "privateRoute": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": "natgw",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": { "Ref" : "natgw" },
+        "RouteTableId": { "Ref" : "privateRT" }
+      }
+    },
+    "publicRoute": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": "igw",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": { "Ref" : "igw" },
+        "RouteTableId": { "Ref" : "publicRT" }
       }
     }
   }
