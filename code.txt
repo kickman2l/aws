@@ -41,3 +41,15 @@
             }
           }
         },
+
+        ami-7abd0209
+        AMI
+
+
+        ami-7abd0209
+
+
+        "ami-79fd7eee"
+
+
+ami-7c22b41c

@@ -1,0 +1,189 @@
+---
+Resources:
+# Creating VPC
+  vpc:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: "192.168.0.0/16"
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      Tags:
+      - Key: "Name"
+        Value: "task-vpc"
+# Creating sub networks
+  prsubnet:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      CidrBlock: "192.168.1.0/24"
+      VpcId:
+        Ref: "vpc"
+      Tags:
+      - Key: "Name"
+        Value: "private-subnet"
+  pubsubnet:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      CidrBlock: "192.168.100.0/24"
+      VpcId:
+        Ref: "vpc"
+      Tags:
+      - Key: "Name"
+        Value: "public-subnet"
+# Creating route tables
+  privateRT:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId:
+        Ref: "vpc"
+      Tags:
+      - Key: "Name"
+        Value: "private-RT"
+  publicRT:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId:
+        Ref: "vpc"
+      Tags:
+      - Key: "Name"
+        Value: "public-RT"
+# Creating nat gateway
+  ip:
+    Type: "AWS::EC2::EIP"
+  igw:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+      - Key: "Name"
+        Value: "internet-GW"
+  attachgw:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId:
+        Ref: "vpc"
+      InternetGatewayId:
+        Ref: "igw"
+  natgw:
+    Type: "AWS::EC2::NatGateway"
+    DependsOn: "ip"
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - "ip"
+        - "AllocationId"
+      SubnetId:
+        Ref: "pubsubnet"
+# Associating route tables with sub networks
+  privateAssoc:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId:
+        Ref: "prsubnet"
+      RouteTableId:
+        Ref: "privateRT"
+  publicAssoc:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId:
+        Ref: "pubsubnet"
+      RouteTableId:
+        Ref: "publicRT"
+# Adding routes to RT
+  privateRoute:
+    Type: "AWS::EC2::Route"
+    DependsOn: "natgw"
+    Properties:
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId:
+        Ref: "natgw"
+      RouteTableId:
+        Ref: "privateRT"
+  publicRoute:
+    Type: "AWS::EC2::Route"
+    DependsOn: "igw"
+    Properties:
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId:
+        Ref: "igw"
+      RouteTableId:
+        Ref: "publicRT"
+# Creating security group
+  SecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Allows 80 and 22 ports connections"
+      VpcId:
+        Ref: "vpc"
+      SecurityGroupIngress:
+      - IpProtocol: "tcp"
+        FromPort: "80"
+        ToPort: "80"
+        CidrIp: "0.0.0.0/0"
+      - IpProtocol: "tcp"
+        FromPort: "22"
+        ToPort: "22"
+        CidrIp: "0.0.0.0/0"
+# Crating instances
+  privateInstance1:
+    Type: "AWS::EC2::Instance"
+    DependsOn: "privateRoute"
+    Properties:
+      ImageId: "ami-7c22b41c"
+      InstanceType: "t2.micro"
+      KeyName: "pavel"
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "false"
+          DeviceIndex: "0"
+          GroupSet:
+            - Ref: "SecurityGroup"
+          SubnetId:
+            Ref: "prsubnet"
+      UserData:
+        Fn::Base64: !Sub |     # No more Fn::Join needed
+          #!/bin/bash
+          sudo apt-get update && sudo apt-get -y upgrade
+          sudo apt-get -y install apache2
+  privateInstance2:
+    Type: "AWS::EC2::Instance"
+    DependsOn: "privateRoute"
+    Properties:
+      ImageId: "ami-7c22b41c"
+      InstanceType: "t2.micro"
+      KeyName: "pavel"
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "false"
+          DeviceIndex: "0"
+          GroupSet:
+            - Ref: "SecurityGroup"
+          SubnetId:
+            Ref: "prsubnet"
+      UserData:
+        Fn::Base64: !Sub |     # No more Fn::Join needed
+          #!/bin/bash
+          sudo apt-get update && sudo apt-get -y upgrade
+          sudo apt-get -y install apache2
+  ElasticLoadBalancer:
+    Type: "AWS::ElasticLoadBalancing::LoadBalancer"
+    Properties:
+      Subnets:
+      - Ref: "prsubnet"
+      AvailabilityZones:
+        Fn::GetAZs: ''
+      Instances:
+      - Ref: "privateInstance1"
+      - Ref: "privateInstance2"
+      Listeners:
+      - LoadBalancerPort: '80'
+        InstancePort:
+          Ref: "WebServerPort"
+        Protocol: "HTTP"
+      HealthCheck:
+        Target:
+          Fn::Join:
+          - ''
+          - - 'HTTP:'
+            - Ref: "WebServerPort"
+            - "/"
+        HealthyThreshold: "3"
+        UnhealthyThreshold: "5"
+        Interval: "30"
+        Timeout: "5"
