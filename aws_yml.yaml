@@ -165,24 +165,21 @@ Resources:
     Type: "AWS::ElasticLoadBalancing::LoadBalancer"
     Properties:
       Subnets:
-      - Ref: "prsubnet"
-      AvailabilityZones:
-        Fn::GetAZs: ''
+      - Ref: "pubsubnet"
+      SecurityGroups:
+      - Ref: "SecurityGroup"
       Instances:
       - Ref: "privateInstance1"
       - Ref: "privateInstance2"
       Listeners:
-      - LoadBalancerPort: '80'
-        InstancePort:
-          Ref: "WebServerPort"
+      - LoadBalancerPort: "80"
+        InstancePort: "80"
         Protocol: "HTTP"
       HealthCheck:
         Target:
           Fn::Join:
           - ''
-          - - 'HTTP:'
-            - Ref: "WebServerPort"
-            - "/"
+          - - 'HTTP:80/'
         HealthyThreshold: "3"
         UnhealthyThreshold: "5"
         Interval: "30"
